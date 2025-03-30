@@ -125,7 +125,7 @@ export default function Home() {
       role: 'user',
       content: input.trim(),
       timestamp: Date.now(),
-      id: user-${Date.now()}
+      id: `user-${Date.now()}`
     };
     
     setMessages(prev => [...prev, userMessage]);
@@ -158,7 +158,7 @@ export default function Home() {
           role: 'assistant',
           content: assistantMessage.content,
           timestamp: Date.now(),
-          id: assistant-${Date.now()}
+          id: `assistant-${Date.now()}`
         }
       ]);
     } catch (error) {
@@ -169,7 +169,7 @@ export default function Home() {
           role: 'assistant',
           content: 'Sorry, I encountered an error. Please try again.',
           timestamp: Date.now(),
-          id: error-${Date.now()}
+          id: `error-${Date.now()}`
         }
       ]);
     } finally {
@@ -191,9 +191,9 @@ export default function Home() {
               {messages.slice(1).map((message) => (
                 <div
                   key={message.id}
-                  className={flex items-start space-x-2 ${
+                  className={`flex items-start space-x-2 ${
                     message.role === 'user' ? 'justify-end' : 'justify-start'
-                  }}
+                  }`}
                 >
                   {message.role === 'assistant' && (
                     <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
@@ -202,16 +202,16 @@ export default function Home() {
                   )}
                   
                   <div
-                    className={flex flex-col max-w-[70%] ${
+                    className={`flex flex-col max-w-[70%] ${
                       message.role === 'user' ? 'items-end' : 'items-start'
-                    }}
+                    }`}
                   >
                     <div
-                      className={rounded-2xl p-4 ${
+                      className={`rounded-2xl p-4 ${
                         message.role === 'user'
                           ? 'bg-blue-500 text-white'
                           : 'bg-gray-100 text-gray-800'
-                      }}
+                      }`}
                     >
                       <p className="whitespace-pre-wrap">{message.content}</p>
                     </div>
@@ -271,11 +271,11 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={isRecording ? stopRecording : startRecording}
-                  className={p-3 rounded-lg transition-colors ${
+                  className={`p-3 rounded-lg transition-colors ${
                     isRecording
                       ? 'bg-red-500 hover:bg-red-600 text-white'
                       : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                  }}
+                  }`}
                   disabled={isLoading}
                 >
                   {isRecording ? <Square size={20} /> : <Mic size={20} />}
