@@ -1,297 +1,298 @@
-'use client';
-
-import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Square, Send, Volume2, User, Bot } from 'lucide-react';
-
-interface Message {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  timestamp?: number;
-  id: string;
-}
-
-export default function Home() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'system',
-      content: 'Whomp is a whitty French poet whose writing is a mix of Ocean Vuong and Charles Bernstein',
-      id: 'system-prompt'
-    }
-  ]);
-  const [input, setInput] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (e) => {
-        chunksRef.current.push(e.data);
-      };
-
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
-        await transcribeAudio(audioBlob);
-        stream.getTracks().forEach(track => track.stop());
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-    } catch (error) {
-      console.error('Error accessing microphone:', error);
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-    }
-  };
-
-  const transcribeAudio = async (audioBlob: Blob) => {
-    try {
-      setIsLoading(true);
-      const formData = new FormData();
-      const file = new File([audioBlob], 'audio.webm', { type: 'audio/webm' });
-      formData.append('file', file);
-
-      const response = await fetch('/api/speech', {
-        method: 'POST',
-        body: formData,
-        // Don't set Content-Type header - let the browser set it with the boundary
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to transcribe audio');
-      }
-
-      const data = await response.json();
-      setInput(data.text);
-    } catch (error: any) {
-      console.error('Error transcribing audio:', error);
-      alert(error.message || 'Failed to transcribe audio');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const speakText = async (text: string) => {
-    try {
-      const response = await fetch('/api/speech', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate speech');
-      }
-
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      audio.play();
-    } catch (error: any) {
-      console.error('Error generating speech:', error);
-      alert(error.message || 'Failed to generate speech');
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
-
-    const userMessage: Message = {
-      role: 'user',
-      content: input.trim(),
-      timestamp: Date.now(),
-      id: `user-${Date.now()}`
-    };
-    
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
-
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: [...messages, userMessage].map(msg => ({
-            role: msg.role,
-            content: msg.content
-          }))
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to get response');
-      }
-
-      const assistantMessage = await response.json();
-      
-      setMessages(prev => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: assistantMessage.content,
-          timestamp: Date.now(),
-          id: `assistant-${Date.now()}`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autumn Vines with Falling Text</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-      ]);
-    } catch (error) {
-      console.error('Error getting completion:', error);
-      setMessages(prev => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: 'Sorry, I encountered an error. Please try again.',
-          timestamp: Date.now(),
-          id: `error-${Date.now()}`
+        
+        body {
+            font-family: Arial, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+            background-color: #f5f5f5; /* Light gray background */
         }
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        
+        .background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            transition: background-color 1s ease;
+        }
+        
+        .vine-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        
+        .vine {
+            position: absolute;
+            border-radius: 50%;
+            transform-origin: center;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 2s ease-in;
+        }
+        
+        .leaf {
+            position: absolute;
+            border-radius: 50% 0;
+            transform-origin: bottom left;
+            z-index: 11;
+            opacity: 0;
+            transition: opacity 2s ease-in;
+        }
+        
+        .falling-text {
+            position: absolute;
+            font-size: 18px;
+            font-weight: bold;
+            opacity: 0;
+            z-index: 20;
+            transition: top 2s ease-in, opacity 0.5s ease-in;
+            transform-origin: center;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="background" id="background"></div>
+    <div class="vine-container" id="vineContainer"></div>
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-      <div className="container mx-auto max-w-4xl px-4 py-8">
-        <div className="bg-white rounded-xl shadow-xl overflow-hidden">
-          <div className="h-[700px] flex flex-col">
-            <div className="p-4 bg-gray-50 border-b border-gray-200">
-              <h1 className="text-2xl font-semibold text-gray-800">AI Poet Chat</h1>
-              <p className="text-sm text-gray-600">Chat with Whomp, the French AI poet</p>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-6">
-              {messages.slice(1).map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex items-start space-x-2 ${
-                    message.role === 'user' ? 'justify-end' : 'justify-start'
-                  }`}
-                >
-                  {message.role === 'assistant' && (
-                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                      <Bot size={20} className="text-blue-600" />
-                    </div>
-                  )}
-                  
-                  <div
-                    className={`flex flex-col max-w-[70%] ${
-                      message.role === 'user' ? 'items-end' : 'items-start'
-                    }`}
-                  >
-                    <div
-                      className={`rounded-2xl p-4 ${
-                        message.role === 'user'
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      <p className="whitespace-pre-wrap">{message.content}</p>
-                    </div>
-                    
-                    {message.role === 'assistant' && (
-                      <button
-                        onClick={() => speakText(message.content)}
-                        className="mt-2 text-gray-500 hover:text-gray-700 transition-colors"
-                        aria-label="Text to speech"
-                      >
-                        <Volume2 size={16} />
-                      </button>
-                    )}
-                    
-                    {message.timestamp && (
-                      <span className="text-xs text-gray-500 mt-1">
-                        {new Date(message.timestamp).toLocaleTimeString()}
-                      </span>
-                    )}
-                  </div>
-
-                  {message.role === 'user' && (
-                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                      <User size={20} className="text-gray-600" />
-                    </div>
-                  )}
-                </div>
-              ))}
-              
-              {isLoading && (
-                <div className="flex justify-start items-center space-x-2">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                    <Bot size={20} className="text-blue-600" />
-                  </div>
-                  <div className="bg-gray-100 rounded-2xl p-4">
-                    <div className="flex space-x-2">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-
-            <div className="p-4 bg-white border-t border-gray-200">
-              <form onSubmit={handleSubmit} className="flex items-center space-x-2">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Type your message..."
-                  className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  disabled={isLoading}
-                />
-                <button
-                  type="button"
-                  onClick={isRecording ? stopRecording : startRecording}
-                  className={`p-3 rounded-lg transition-colors ${
-                    isRecording
-                      ? 'bg-red-500 hover:bg-red-600 text-white'
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                  }`}
-                  disabled={isLoading}
-                >
-                  {isRecording ? <Square size={20} /> : <Mic size={20} />}
-                </button>
-                <button
-                  type="submit"
-                  className="p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={!input.trim() || isLoading}
-                >
-                  <Send size={20} />
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+    <script>
+        // Change background color
+        function changeBackgroundColor() {
+            const colors = [
+                '#f5f5f5', // Light gray
+                '#f8f8e8', // Light cream
+                '#fafaf0', // Ivory
+                '#f0f8ff', // Alice blue
+                '#f0fff0', // Honeydew
+                '#f5f5dc', // Beige
+                '#fffaf0'  // Floral white
+            ];
+            
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            document.getElementById('background').style.backgroundColor = color;
+            createFallingText();
+        }
+        
+        // Autumn colors
+        const autumnColors = [
+            '#8B4513', // SaddleBrown (vine color)
+            '#A0522D', // Sienna (vine color)
+            '#CD853F', // Peru (vine color)
+            '#D2691E', // Chocolate (vine color)
+            '#B22222', // FireBrick (leaf color)
+            '#FF8C00', // DarkOrange (leaf color)
+            '#DAA520', // GoldenRod (leaf color)
+            '#FF4500', // OrangeRed (leaf color)
+            '#DC143C', // Crimson (leaf color)
+            '#FFD700'  // Gold (leaf color)
+        ];
+        
+        // Random autumn-themed words for falling text
+        const autumnWords = [
+            "Autumn", "Falling", "Leaves", "Harvest", 
+            "October", "Golden", "Crisp", "Cozy", 
+            "Maple", "Orchard", "Pumpkin", "Rustle",
+            "Amber", "Crimson", "Flutter", "Gather",
+            "Scenic", "Vibrant", "Nostalgic", "Breeze"
+        ];
+        
+        // Leaf colors - more vibrant autumn colors
+        const leafColors = autumnColors.slice(4);
+        
+        // Vine colors - more brown autumn colors
+        const vineColors = autumnColors.slice(0, 4);
+        
+        // Create falling text
+        function createFallingText() {
+            const text = document.createElement('div');
+            text.className = 'falling-text';
+            
+            // Random word from autumn words
+            text.innerText = autumnWords[Math.floor(Math.random() * autumnWords.length)];
+            
+            // Random starting position at top of screen
+            const startX = Math.random() * (window.innerWidth - 100);
+            text.style.left = `${startX}px`;
+            text.style.top = '-50px';
+            
+            // Random color from autumn colors
+            text.style.color = autumnColors[Math.floor(Math.random() * autumnColors.length)];
+            
+            // Random rotation
+            const rotation = Math.random() * 30 - 15;
+            text.style.transform = `rotate(${rotation}deg)`;
+            
+            // Add to body
+            document.body.appendChild(text);
+            
+            // Start falling animation
+            setTimeout(() => {
+                text.style.opacity = 1;
+                
+                // Random ending position (Y) - somewhere on screen
+                const endY = 100 + Math.random() * (window.innerHeight - 200);
+                text.style.top = `${endY}px`;
+                
+                // Text stays where it lands
+            }, 10);
+        }
+        
+        // Vine growth system
+        let vineGrowthInterval;
+        let vinePercentage = 0;
+        const vineContainer = document.getElementById('vineContainer');
+        const maxVines = 800;  // Number of vine segments
+        let vines = [];
+        
+        function createVine() {
+            if (vines.length >= maxVines) return;
+            
+            // Random position
+            const x = Math.random() * window.innerWidth;
+            const y = Math.random() * window.innerHeight;
+            
+            // Create vine segment
+            const vine = document.createElement('div');
+            vine.className = 'vine';
+            
+            // Size
+            const size = 5 + Math.random() * 10;
+            vine.style.width = `${size}px`;
+            vine.style.height = `${size}px`;
+            
+            // Position
+            vine.style.left = `${x}px`;
+            vine.style.top = `${y}px`;
+            
+            // Color - autumn brown
+            vine.style.backgroundColor = vineColors[Math.floor(Math.random() * vineColors.length)];
+            
+            // Add to container
+            vineContainer.appendChild(vine);
+            vines.push(vine);
+            
+            // Fade in slowly
+            setTimeout(() => {
+                vine.style.opacity = 1;
+            }, 10);
+            
+            // Create leaves (50% chance)
+            if (Math.random() < 0.5) {
+                const leaf = document.createElement('div');
+                leaf.className = 'leaf';
+                
+                // Leaf size
+                const leafSize = size * (1 + Math.random());
+                leaf.style.width = `${leafSize}px`;
+                leaf.style.height = `${leafSize}px`;
+                
+                // Position near vine
+                const angle = Math.random() * Math.PI * 2;
+                const distance = size / 2;
+                const leafX = x + Math.cos(angle) * distance;
+                const leafY = y + Math.sin(angle) * distance;
+                
+                leaf.style.left = `${leafX}px`;
+                leaf.style.top = `${leafY}px`;
+                
+                // Rotation
+                leaf.style.transform = `rotate(${Math.random() * 360}deg)`;
+                
+                // Color - autumn leaf color
+                leaf.style.backgroundColor = leafColors[Math.floor(Math.random() * leafColors.length)];
+                
+                vineContainer.appendChild(leaf);
+                vines.push(leaf);
+                
+                // Fade in slowly with delay
+                setTimeout(() => {
+                    leaf.style.opacity = 1;
+                }, 500 + Math.random() * 1000);
+            }
+            
+            // Calculate coverage percentage
+            vinePercentage = (vines.length / maxVines) * 100;
+            
+            // If fully covered, reset after a delay
+            if (vinePercentage >= 100) {
+                clearInterval(vineGrowthInterval);
+                setTimeout(resetVines, 2000);
+            }
+        }
+        
+        function resetVines() {
+            // Fade out all vines
+            vines.forEach(vine => {
+                vine.style.opacity = 0;
+            });
+            
+            // Remove all vines after fade out
+            setTimeout(() => {
+                while (vineContainer.firstChild) {
+                    vineContainer.removeChild(vineContainer.firstChild);
+                }
+                
+                vines = [];
+                vinePercentage = 0;
+                
+                // Start growing again
+                startVineGrowth();
+                
+                // Also remove all text
+                const textElements = document.querySelectorAll('.falling-text');
+                textElements.forEach(el => {
+                    el.style.opacity = 0;
+                    setTimeout(() => {
+                        if (el.parentNode) {
+                            el.parentNode.removeChild(el);
+                        }
+                    }, 500);
+                });
+            }, 2000);
+        }
+        
+        function startVineGrowth() {
+            // Create a new vine every 300ms to grow more slowly
+            vineGrowthInterval = setInterval(createVine, 300);
+        }
+        
+        // Start with one word
+        setTimeout(createFallingText, 1000);
+        
+        // Occasionally add falling text automatically
+        setInterval(() => {
+            if (Math.random() < 0.3) { // 30% chance every 3 seconds
+                createFallingText();
+            }
+        }, 3000);
+        
+        // Listen for Enter key to change background and add text
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                changeBackgroundColor();
+            }
+        });
+        
+        // Initialize
+        startVineGrowth();
+    </script>
+</body>
+</html>
